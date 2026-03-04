@@ -1,0 +1,28 @@
+# --- DATA PRIVACY (CRITICAL) ---
+# Never upload raw patient data or large datasets
+data/
+*.csv
+*.xlsx
+*.json
+*.sql
+*.zip
+
+# --- PYTHON SETTINGS ---
+# Ignore the "hidden" folders Python creates
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+.env
+
+# --- JUPYTER SETTINGS ---
+# Ignore the checkpoint folders created by Jupyter
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+
+# --- OS SETTINGS ---
+# Ignore system-specific junk files
+.DS_Store
+Thumbs.db
