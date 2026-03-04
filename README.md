@@ -7,3 +7,5 @@ cancer? How can computation be used to better target people who are determined t
 Anya Mathur and Cherish Amby-Okolo
 
 Data Source(s): CDC, SEER Incidence
+
+Data Setup: To run this analysis, download [my_data_file.csv] from the shared Box folder and place it in the /data directory of this repository.
