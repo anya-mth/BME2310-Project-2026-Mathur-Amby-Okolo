@@ -2,12 +2,12 @@
 # BME 2301 2026 Project 
 # Project Analysis
 
-Cherish and Anya
-Breast Cancer Determinants
+#Cherish and Anya
+#Breast Cancer Determinants
 
 
 
-Load dataset
+#Load dataset
 import time
 import pandas as pd
 import numpy as np
@@ -27,7 +27,7 @@ df = pd.read_csv('breast_cancer_data.csv')
 #truncated data for observing the first few and last few rows of the dataset
 df.head(509411)
 
-Cleaning Dataset
+##Cleaning Dataset
 df.drop("BIRADS_breast_density", axis=1, inplace=True)
 df.dropna()
 df.info()
@@ -60,7 +60,7 @@ plt.title('Distribution of Race')
 plt.xlabel('Race')
 plt.ylabel('Frequency')
 plt.show()
-More detailed visualization
+#More detailed visualization
 pink = "#ec4899"
 df_cancer = df[df["breast_cancer_history"] == 1]
 
@@ -99,7 +99,7 @@ for col in features:
     plt.suptitle(f"{col} distribution within Cancer Cases (by Race) [%]")
     plt.tight_layout()
     plt.show()
-Training! 1st. Categorical Naive Bayes, 2. SVM 3. KNN
+#Training! 1st. Categorical Naive Bayes, 2. SVM 3. KNN
 feature_cols = [
     "age_group_5_years",
     "race_eth",
@@ -148,7 +148,7 @@ plt.title("Categorical Naive Bayes Performance")
 plt.xlabel("Predicted Label")
 plt.ylabel("True Label")
 plt.show()
-Testing w hypothetical patient...
+#Testing w hypothetical patient...
 new_patient = pd.DataFrame([{
     "age_group_5_years": 8,
     "race_eth": 2,
@@ -161,13 +161,15 @@ new_patient = pd.DataFrame([{
     "biophx": 1
 }])
 
+
+
 pred_class = cat_nb.predict(new_patient)[0]
 pred_probs = cat_nb.predict_proba(new_patient)[0]
 
 print("Predicted class:", pred_class)
 print("Probability of no cancer:", pred_probs[0])
 print("Probability of cancer:", pred_probs[1])
-SVM + hypothetical patient
+#SVM + hypothetical patient
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.neighbors import KNeighborsClassifier
@@ -255,7 +257,7 @@ plt.xlabel("Predicted Label")
 plt.ylabel("True Label")
 plt.show()
 
-KNN + hypothetical
+#KNN + hypothetical
 
 
 # -------------------------
@@ -359,7 +361,7 @@ pred_probs = knn.predict_proba(new_patient_scaled)[0]
 print("Predicted class:", pred_class)
 print("Probability of no cancer:", pred_probs[0])
 print("Probability of cancer:", pred_probs[1])
-hypothetical adjusted threshold
+#hypothetical adjusted threshold
 feature_cols = [
     "age_group_5_years",
     "race_eth",
