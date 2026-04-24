@@ -1,1 +1,437 @@
+# BME 2301 2026 Project 
+# Project Analysis
 
+Cherish and Anya
+Breast Cancer Determinants
+
+
+
+Load dataset
+import time
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import confusion_matrix
+from sklearn.svm import SVC
+from sklearn.naive_bayes import GaussianNB
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.naive_bayes import CategoricalNB
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report, roc_auc_score
+from sklearn.preprocessing import StandardScaler
+
+df = pd.read_csv('breast_cancer_data.csv')
+#truncated data for observing the first few and last few rows of the dataset
+df.head(509411)
+
+Cleaning Dataset
+df.drop("BIRADS_breast_density", axis=1, inplace=True)
+df.dropna()
+df.info()
+#shape of the dataset
+df.shape #509410, 12
+cols_with_unknown = [
+    "race_eth", "first_degree_hx", "age_menarche",
+    "age_first_birth", "current_hrt", "menopaus",
+    "bmi_group", "biophx", "breast_cancer_history"
+]
+
+for col in cols_with_unknown:
+    df = df[df[col] != 9]
+
+print("Shape:", df.shape)
+#find how many rows now after removal
+
+
+Visualizing data set
+#histogram
+plt.hist(df['age_group_5_years'], bins=30, color='blue', edgecolor='black')
+plt.title('Distribution of Age')
+plt.xlabel('Age')
+plt.ylabel('Frequency')
+plt.show()
+
+#race_eth distribution
+plt.hist(df['race_eth'], bins=30, color='green', edgecolor='black')
+plt.title('Distribution of Race')
+plt.xlabel('Race')
+plt.ylabel('Frequency')
+plt.show()
+More detailed visualization
+pink = "#ec4899"
+df_cancer = df[df["breast_cancer_history"] == 1]
+
+features = [
+    "first_degree_hx",
+    "biophx",
+    "bmi_group",
+    "current_hrt",
+    "menopaus",
+    "age_group_5_years",
+    "race_eth"
+]
+
+features = [col for col in df_cancer.columns if col != "breast_cancer_history"]
+
+for col in features:
+    fig, axes = plt.subplots(2, 3, figsize=(12, 6))
+    axes = axes.flatten()
+    
+    for i, r in enumerate(sorted(df_cancer["race_eth"].unique())):
+        subset = df_cancer[df_cancer["race_eth"] == r]
+        
+        if subset[col].nunique() > 15:
+            axes[i].set_visible(False)
+            continue
+        
+        pct = subset[col].value_counts(normalize=True).sort_index() * 100
+        
+        pct.plot(kind="bar", ax=axes[i], color=pink)
+        
+        axes[i].set_title(f"Race {r}")
+        axes[i].set_ylabel("%")
+        axes[i].set_xlabel(col)
+        axes[i].set_ylim(0, 100)
+    
+    plt.suptitle(f"{col} distribution within Cancer Cases (by Race) [%]")
+    plt.tight_layout()
+    plt.show()
+Training! 1st. Categorical Naive Bayes, 2. SVM 3. KNN
+feature_cols = [
+    "age_group_5_years",
+    "race_eth",
+    "first_degree_hx",
+    "age_menarche",
+    "age_first_birth",
+    "current_hrt",
+    "menopaus",
+    "bmi_group",
+    "biophx"
+]
+X = df[feature_cols]
+y = df["breast_cancer_history"]
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y,
+    test_size=0.2,
+    random_state=42,
+    stratify=y
+)
+
+cat_nb = CategoricalNB()
+
+start_train = time.time()
+cat_nb.fit(X_train, y_train)
+end_train = time.time()
+
+start_pred = time.time()
+y_pred = cat_nb.predict(X_test)
+y_prob = cat_nb.predict_proba(X_test)[:, 1]
+end_pred = time.time()
+
+print("Training time:", end_train - start_train)
+print("Prediction time:", end_pred - start_pred)
+
+print("Accuracy:", accuracy_score(y_test, y_pred))
+print("AUC:", roc_auc_score(y_test, y_prob))
+print("\nConfusion Matrix:\n", confusion_matrix(y_test, y_pred))
+print("\nClassification Report:\n", classification_report(y_test, y_pred))
+
+mat = confusion_matrix(y_test, y_pred)
+
+plt.figure(figsize=(5, 4))
+sns.heatmap(mat, annot=True, fmt="d", cbar=False)
+plt.title("Categorical Naive Bayes Performance")
+plt.xlabel("Predicted Label")
+plt.ylabel("True Label")
+plt.show()
+Testing w hypothetical patient...
+new_patient = pd.DataFrame([{
+    "age_group_5_years": 8,
+    "race_eth": 2,
+    "first_degree_hx": 1,
+    "age_menarche": 0,
+    "age_first_birth": 0,
+    "current_hrt": 0,
+    "menopaus": 2,
+    "bmi_group": 4,
+    "biophx": 1
+}])
+
+pred_class = cat_nb.predict(new_patient)[0]
+pred_probs = cat_nb.predict_proba(new_patient)[0]
+
+print("Predicted class:", pred_class)
+print("Probability of no cancer:", pred_probs[0])
+print("Probability of cancer:", pred_probs[1])
+SVM + hypothetical patient
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, roc_auc_score
+
+# -------------------------
+# 1. Keep only the exact features you want
+# -------------------------
+feature_cols = [
+    "age_group_5_years",
+    "race_eth",
+    "first_degree_hx",
+    "age_menarche",
+    "age_first_birth",
+    "current_hrt",
+    "menopaus",
+    "bmi_group",
+    "biophx"
+]
+
+# remove unknown target
+df_knn = df[df["breast_cancer_history"] != 9].copy()
+
+# remove unknowns in predictors
+for col in feature_cols:
+    df_knn = df_knn[df_knn[col] != 9]
+
+# if you are using the aggregated dataset with count, expand it
+if "count" in df_knn.columns:
+    counts = df_knn["count"].clip(lower=0)
+    df_knn = df_knn.loc[df_knn.index.repeat(counts)].reset_index(drop=True)
+
+# keep only the 9 predictors + target
+df_knn = df_knn[feature_cols + ["breast_cancer_history"]]
+
+# -------------------------
+# 2. Split X and y
+# -------------------------
+X = df_knn[feature_cols].copy()
+y = df_knn["breast_cancer_history"].copy()
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y,
+    test_size=0.2,
+    random_state=42,
+    stratify=y
+)
+
+# -------------------------
+# 3. Scale
+# -------------------------
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+# -------------------------
+# 4. Train KNN
+# -------------------------
+knn = KNeighborsClassifier(n_neighbors=5)
+knn.fit(X_train_scaled, y_train)
+
+# -------------------------
+# 5. Evaluate
+# -------------------------
+start_pred = time.time()
+
+y_pred = knn.predict(X_test_scaled)
+y_prob = knn.predict_proba(X_test_scaled)[:, 1]
+
+end_pred = time.time()
+
+print(f"Prediction time: {end_pred - start_pred:.4f} seconds")
+
+print("Accuracy:", accuracy_score(y_test, y_pred))
+print("AUC:", roc_auc_score(y_test, y_prob))
+print("\nConfusion Matrix:\n", confusion_matrix(y_test, y_pred))
+print("\nClassification Report:\n", classification_report(y_test, y_pred))
+
+mat = confusion_matrix(y_test, y_pred)
+
+plt.figure(figsize=(5, 4))
+sns.heatmap(mat, annot=True, fmt="d", cbar=False)
+plt.title("KNN Performance")
+plt.xlabel("Predicted Label")
+plt.ylabel("True Label")
+plt.show()
+
+KNN + hypothetical
+
+
+# -------------------------
+# 1. Keep only the exact features you want
+# -------------------------
+feature_cols = [
+    "age_group_5_years",
+    "race_eth",
+    "first_degree_hx",
+    "age_menarche",
+    "age_first_birth",
+    "current_hrt",
+    "menopaus",
+    "bmi_group",
+    "biophx"
+]
+
+# remove unknown target
+df_knn = df[df["breast_cancer_history"] != 9].copy()
+
+# remove unknowns in predictors
+for col in feature_cols:
+    df_knn = df_knn[df_knn[col] != 9]
+
+# if you are using the aggregated dataset with count, expand it
+if "count" in df_knn.columns:
+    counts = df_knn["count"].clip(lower=0)
+    df_knn = df_knn.loc[df_knn.index.repeat(counts)].reset_index(drop=True)
+
+# keep only the 9 predictors + target
+df_knn = df_knn[feature_cols + ["breast_cancer_history"]]
+
+# -------------------------
+# 2. Split X and y
+# -------------------------
+X = df_knn[feature_cols].copy()
+y = df_knn["breast_cancer_history"].copy()
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y,
+    test_size=0.2,
+    random_state=42,
+    stratify=y
+)
+
+# -------------------------
+# 3. Scale
+# -------------------------
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+# -------------------------
+# 4. Train KNN
+# -------------------------
+knn = KNeighborsClassifier(n_neighbors=5)
+knn.fit(X_train_scaled, y_train)
+
+# -------------------------
+# 5. Evaluate
+# -------------------------
+start_pred = time.time()
+
+y_pred = knn.predict(X_test_scaled)
+y_prob = knn.predict_proba(X_test_scaled)[:, 1]
+
+end_pred = time.time()
+
+print(f"Prediction time: {end_pred - start_pred:.4f} seconds")
+
+print("Accuracy:", accuracy_score(y_test, y_pred))
+print("AUC:", roc_auc_score(y_test, y_prob))
+print("\nConfusion Matrix:\n", confusion_matrix(y_test, y_pred))
+print("\nClassification Report:\n", classification_report(y_test, y_pred))
+
+mat = confusion_matrix(y_test, y_pred)
+
+plt.figure(figsize=(5, 4))
+sns.heatmap(mat, annot=True, fmt="d", cbar=False)
+plt.title("KNN Performance")
+plt.xlabel("Predicted Label")
+plt.ylabel("True Label")
+plt.show()
+new_patient = pd.DataFrame([{
+    "age_group_5_years": 8,
+    "race_eth": 2,
+    "first_degree_hx": 1,
+    "age_menarche": 0,
+    "age_first_birth": 0,
+    "current_hrt": 0,
+    "menopaus": 2,
+    "bmi_group": 4,
+    "biophx": 1
+}], columns=feature_cols)
+
+new_patient_scaled = scaler.transform(new_patient)
+
+pred_class = knn.predict(new_patient_scaled)[0]
+pred_probs = knn.predict_proba(new_patient_scaled)[0]
+
+print("Predicted class:", pred_class)
+print("Probability of no cancer:", pred_probs[0])
+print("Probability of cancer:", pred_probs[1])
+hypothetical adjusted threshold
+feature_cols = [
+    "age_group_5_years",
+    "race_eth",
+    "first_degree_hx",
+    "age_menarche",
+    "age_first_birth",
+    "current_hrt",
+    "menopaus",
+    "bmi_group",
+    "biophx"
+]
+
+X = df[feature_cols]
+y = df["breast_cancer_history"]
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y,
+    test_size=0.2,
+    random_state=42,
+    stratify=y
+)
+
+cat_nb = CategoricalNB()
+
+start_train = time.time()
+cat_nb.fit(X_train, y_train)
+end_train = time.time()
+
+start_pred = time.time()
+
+y_prob = cat_nb.predict_proba(X_test)[:, 1]
+
+# apply threshold
+threshold = 0.3
+y_pred = (y_prob > threshold).astype(int)
+
+end_pred = time.time()
+
+# -----------------------
+# Evaluation
+# -----------------------
+print(f"Threshold: {threshold}")
+print(f"Prediction time: {end_pred - start_pred:.4f} seconds")
+
+print("Accuracy:", accuracy_score(y_test, y_pred))
+print("AUC:", roc_auc_score(y_test, y_prob))
+print("\nConfusion Matrix:\n", confusion_matrix(y_test, y_pred))
+print("\nClassification Report:\n", classification_report(y_test, y_pred))
+
+mat = confusion_matrix(y_test, y_pred)
+
+plt.figure(figsize=(5, 4))
+sns.heatmap(mat, annot=True, fmt="d", cbar=False)
+plt.title("Categorical Naive Bayes Performance")
+plt.xlabel("Predicted Label")
+plt.ylabel("True Label")
+plt.show()
+#hypothetical patient
+new_patient = pd.DataFrame([{
+    "age_group_5_years": 8,
+    "race_eth": 1,
+    "first_degree_hx": 1,
+    "age_menarche": 1,
+    "age_first_birth": 1,
+    "current_hrt": 0,
+    "menopaus": 2,
+    "bmi_group": 4,
+    "biophx": 1
+}])
+
+pred_class = cat_nb.predict(new_patient)[0]
+pred_probs = cat_nb.predict_proba(new_patient)[0]
+
+print("Predicted class:", pred_class)
+print("Probability of no cancer:", pred_probs[0])
+print("Probability of cancer:", pred_probs[1])
